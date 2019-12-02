@@ -40,5 +40,3 @@ async function partTwo () {
 
   console.log(result);
 };
-
-partTwo();
