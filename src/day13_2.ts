@@ -1,7 +1,8 @@
-import inputPath from './inputs/13.txt'
+import * as path from "https://deno.land/std/path/mod.ts";
+import { readFileStr } from "https://deno.land/std/fs/mod.ts";
 
 (async () => {
-  let input = await fetch(inputPath).then(res => res.text());
+  let input = await readFileStr(path.resolve(Deno.cwd(), `src/inputs/13.txt`));
 
   const program = input
   .split("\n")[0]
@@ -14,89 +15,35 @@ import inputPath from './inputs/13.txt'
   // Insert free money !
   program.set(BigInt(0), BigInt(2));
 
-  let leftDown = false;
-  let rightDown = false;
-
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowLeft') {
-      leftDown = true;
-    }
-    if (e.key === 'ArrowRight') {
-      rightDown = true;
-    }
-  });
-
-  document.addEventListener('keyup', (e) => {
-    if (e.key === 'ArrowLeft') {
-      leftDown = false;
-    }
-    if (e.key === 'ArrowRight') {
-      rightDown = false;
-    }
-  });
-
-  const root = document.getElementById('app');
-  console.log(root);
-  const score = document.createElement('p');
-  root.appendChild(score);
-  const grid = document.createElement('div');
-  grid.style.position = "relative";
-  root.appendChild(grid);
-
-  const tiles = new Map<string, any>();
-  
   let ball = null;
   let paddle = null;
 
   const drawTile = (x: bigint, y: bigint, id: bigint) => {
-    const key = `${x}_${y}`;
-    let tile = tiles.get(key)
-    if (!tile) {
-      tile = document.createElement('div');
-      tile.style.position = 'absolute';
-      tile.style.left = `${Number(x) * 20}px`;
-      tile.style.top = `${Number(y) * 20}px`;
-      tile.style.height = `20px`;
-      tile.style.width = `20px`;
-      grid.appendChild(tile);
-    }
-    if (id === BigInt(0)) {
-      // empty
-      tile.style.background = 'white'
-    } else if (id === BigInt(1)) {
-      // wall
-      tile.style.background = 'black'
-    } else if (id === BigInt(2)) {
-      // block
-      tile.style.background = '#42A5F5'
-    } else if (id === BigInt(3)) {
+     if (id === BigInt(3)) {
       // horizontal paddle
       paddle = x;
-      tile.style.background = '#4CAF50'
     } else if (id === BigInt(4)) {
       // ball
       ball = x;
-      tile.style.background = '#F44336';
     }
   }
 
-
   let mode: "x" | "y" | "id" = "x";
+
+  let score = 0;
 
   let x = BigInt(0);
   let y = BigInt(0);
 
   Intcode(program, {
-    onInput: (_i, next) => {
-      window.setTimeout(() => {
-        if (ball === paddle) {
-          next(BigInt(0))
-        } else if (ball < paddle) {
-          next(BigInt(-1))
-        } else if (ball > paddle) {
-          next(BigInt(1))
-        }
-      }, 0);
+    onInput: (_i) => {
+      if (ball === paddle) {
+        return(BigInt(0))
+      } else if (ball < paddle) {
+        return(BigInt(-1))
+      } else if (ball > paddle) {
+        return(BigInt(1))
+      }
     },
     onOutput: v => {
       if (mode === "x") {
@@ -107,7 +54,7 @@ import inputPath from './inputs/13.txt'
         mode = 'id';
       } else if (mode === 'id') {
         if (x === BigInt(-1) && y === BigInt(0)) {
-          score.innerText = Number(v);
+          score = Number(v);
         } else {
           drawTile(x, y, v);
         }
@@ -117,6 +64,7 @@ import inputPath from './inputs/13.txt'
       }
     },
     onHalt: () => {
+      console.log({ score });
       console.log("done");
     }
   });
@@ -137,8 +85,8 @@ import inputPath from './inputs/13.txt'
 
 
 interface Options {
-  onInput: (index: number, next: (val: bigint) => void) => void;
-  // onInput: (index: number) => bigint;
+  // onInput: (index: number, next: (val: bigint) => void) => void;
+  onInput: (index: number) => bigint;
   onOutput?: (val: bigint) => void;
   onHalt?: () => void;
 }
@@ -183,11 +131,12 @@ function Intcode(program: Program, options: Options) {
       // Input
       const index = inputIndex;
       inputIndex++;
-      onInput(index, (val) => {
-        opcode.set(1, val);
-        runLoop(cursor + BigInt(2))
-      });
-      return false;
+      // onInput(index, (val) => {
+      //   opcode.set(1, val);
+      //   runLoop(cursor + BigInt(2))
+      // });
+      opcode.set(1, onInput(index));
+      return cursor + BigInt(2);
     }
     if (opcode.type === BigInt(4)) {
       // Output
