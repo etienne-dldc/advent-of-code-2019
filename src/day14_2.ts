@@ -106,7 +106,7 @@ interface Reaction {
   function compute(input: number) {
     const rest: Chemicals = {};
     const used: Chemicals = { FUEL: input };
-  
+
     order.forEach(chem => {
       if (chem === "ORE") {
         return;
@@ -150,5 +150,3 @@ interface Reaction {
   }
   console.log(min);
 })();
-
-
